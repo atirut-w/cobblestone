@@ -37,6 +37,10 @@ int main(int argc, char *argv[]) {
     throw std::runtime_error("Failed to initialize SDL");
   }
 
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+
   SDL_Window *window =
       SDL_CreateWindow("Cobblestone", SDL_WINDOWPOS_UNDEFINED,
                        SDL_WINDOWPOS_UNDEFINED, 480, 272, SDL_WINDOW_OPENGL);
