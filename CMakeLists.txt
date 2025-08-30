@@ -3,6 +3,8 @@ project(Cobblestone)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+add_subdirectory(3rd)
+
 include(FindPkgConfig)
 pkg_search_module(SDL2 REQUIRED sdl2)
 
@@ -15,6 +17,8 @@ target_include_directories(cobblestone PRIVATE
 )
 target_link_libraries(cobblestone PRIVATE
     ${SDL2_LIBRARIES}
+    nlohmann_json::nlohmann_json
+
     pspdebug
     pspdisplay
     pspge
