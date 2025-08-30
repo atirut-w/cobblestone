@@ -75,6 +75,19 @@ Font::Font(const ResourceLocation &loc) {
       if (!surface) {
         throw std::runtime_error("Failed to load texture " + file_path + ": " + IMG_GetError());
       }
+      bitmapProvider->texture_width = surface->w;
+      bitmapProvider->texture_height = surface->h;
+      std::cout << "Loading texture: " << file_path << " (" << surface->w << "x" << surface->h << ")" << std::endl;
+      std::cout << "Surface format: " << SDL_GetPixelFormatName(surface->format->format) << std::endl;
+
+      // Convert to RGBA if needed
+      SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+      if (!converted) {
+        throw std::runtime_error("Failed to convert surface format");
+      }
+      SDL_FreeSurface(surface);
+      surface = converted;
+
       glBindTexture(GL_TEXTURE_2D, bitmapProvider->texture);
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

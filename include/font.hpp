@@ -11,10 +11,12 @@ struct FontProvider {
 };
 
 struct BitmapFontProvider : public FontProvider {
-  int ascent;
-  std::vector<std::vector<uint16_t>> chars;
-  Texture texture;
-  int height;
+   int ascent;
+   std::vector<std::vector<uint16_t>> chars;
+   Texture texture;
+   int height;
+   int texture_width;
+   int texture_height;
 };
 
 struct SpaceFontProvider : public FontProvider {
