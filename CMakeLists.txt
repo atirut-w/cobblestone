@@ -7,9 +7,11 @@ add_subdirectory(3rd)
 
 include(FindPkgConfig)
 pkg_search_module(SDL2 REQUIRED sdl2)
+pkg_search_module(SDL2_IMAGE REQUIRED SDL2_image)
 
 add_executable(cobblestone
     src/main.cpp
+    src/font.cpp
 )
 target_include_directories(cobblestone PRIVATE
     include
@@ -17,6 +19,7 @@ target_include_directories(cobblestone PRIVATE
 )
 target_link_libraries(cobblestone PRIVATE
     ${SDL2_LIBRARIES}
+    ${SDL2_IMAGE_LIBRARIES}
     nlohmann_json::nlohmann_json
 
     pspdebug

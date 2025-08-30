@@ -23,4 +23,12 @@ struct ResourceLocation {
       path = str;
     }
   }
+
+  operator std::string() const {
+    return ns + ":" + path;
+  }
+
+  std::string to_path(const std::string &ctx) const {
+    return "assets/" + ns + "/" + ctx + "/" + path;
+  }
 };

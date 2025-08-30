@@ -1,3 +1,4 @@
+#include "font.hpp"
 #include <GLES/gl.h>
 #include <SDL.h>
 #include <stdexcept>
@@ -52,6 +53,8 @@ int main(int argc, char *argv[]) {
   if (!gl_context) {
     throw std::runtime_error("Failed to create OpenGL context");
   }
+
+  Font font(ResourceLocation("minecraft:default"));
 
   bool running = true;
   SDL_Event event;
