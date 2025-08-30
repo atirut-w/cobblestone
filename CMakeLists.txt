@@ -10,6 +10,7 @@ add_executable(cobblestone
     src/main.cpp
 )
 target_include_directories(cobblestone PRIVATE
+    include
     ${SDL2_INCLUDE_DIRS}
 )
 target_link_libraries(cobblestone PRIVATE
