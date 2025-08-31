@@ -77,25 +77,19 @@ void render_text(const Font& font, const std::string& text, float x, float y, fl
 
         // Find the provider that has this character
         const BitmapFontProvider* bitmap_provider = nullptr;
-        int char_index = -1;
-        int row = -1, col = -1;
+        const BitmapFontProvider::Glyph* glyph = nullptr;
 
         // Function to search providers recursively
         std::function<void(const std::vector<std::unique_ptr<FontProvider>>&)> search_providers =
             [&](const std::vector<std::unique_ptr<FontProvider>>& providers) {
                 for (const auto& provider : providers) {
                     if (auto bmp = dynamic_cast<const BitmapFontProvider*>(provider.get())) {
-                        // Search through chars
-                        for (int r = 0; r < bmp->chars.size(); ++r) {
-                            const auto& row_chars = bmp->chars[r];
-                            for (int c = 0; c < row_chars.size(); ++c) {
-                                if (row_chars[c] == code) {
-                                    bitmap_provider = bmp;
-                                    row = r;
-                                    col = c;
-                                    return;
-                                }
-                            }
+                        // Search through glyph cache
+                        auto it = bmp->glyphs.find(code);
+                        if (it != bmp->glyphs.end()) {
+                            bitmap_provider = bmp;
+                            glyph = &it->second;
+                            return;
                         }
                     } else if (auto ref = dynamic_cast<const ReferenceFontProvider*>(provider.get())) {
                         search_providers(ref->ref->providers);
@@ -106,18 +100,12 @@ void render_text(const Font& font, const std::string& text, float x, float y, fl
 
         search_providers(font.providers);
 
-        if (bitmap_provider) {
-            // Calculate texture coordinates
-            int tex_width = bitmap_provider->texture_width;
-            int tex_height = bitmap_provider->texture_height;
-            int chars_per_row = bitmap_provider->chars.empty() ? 16 : bitmap_provider->chars[0].size();
-            int char_width = tex_width / chars_per_row;
-            int char_height = bitmap_provider->height;
-
-            float u1 = (col * char_width) / static_cast<float>(tex_width);
-            float v1 = (row * char_height) / static_cast<float>(tex_height);
-            float u2 = ((col + 1) * char_width) / static_cast<float>(tex_width);
-            float v2 = ((row + 1) * char_height) / static_cast<float>(tex_height);
+        if (bitmap_provider && glyph) {
+            // Use cached glyph coordinates
+            float u1 = glyph->u;
+            float v1 = glyph->v;
+            float u2 = u1 + (glyph->width / static_cast<float>(bitmap_provider->texture_width));
+            float v2 = v1 + (bitmap_provider->height / static_cast<float>(bitmap_provider->texture_height));
 
             // Bind texture
             glBindTexture(GL_TEXTURE_2D, bitmap_provider->texture);
@@ -125,13 +113,13 @@ void render_text(const Font& font, const std::string& text, float x, float y, fl
             // Draw quad
             glBegin(GL_QUADS);
             glTexCoord2f(u1, v1); glVertex2f(current_x, y);
-            glTexCoord2f(u2, v1); glVertex2f(current_x + char_width * scale, y);
-            glTexCoord2f(u2, v2); glVertex2f(current_x + char_width * scale, y + char_height * scale);
-            glTexCoord2f(u1, v2); glVertex2f(current_x, y + char_height * scale);
+            glTexCoord2f(u2, v1); glVertex2f(current_x + glyph->width * scale, y);
+            glTexCoord2f(u2, v2); glVertex2f(current_x + glyph->width * scale, y + bitmap_provider->height * scale);
+            glTexCoord2f(u1, v2); glVertex2f(current_x, y + bitmap_provider->height * scale);
             glEnd();
 
             // Advance position
-            current_x += char_width * scale;
+            current_x += glyph->width * scale;
         } else {
             // Check space provider for advance
             for (const auto& provider : font.providers) {

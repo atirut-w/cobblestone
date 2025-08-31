@@ -32,6 +32,32 @@ Font::Font(const ResourceLocation &loc) {
       } else {
         bitmapProvider->height = 8;
       }
+      std::string file_path = ResourceLocation(provider["file"].get<std::string>()).to_path("textures");
+      SDL_Surface* surface = IMG_Load(file_path.c_str());
+      if (!surface) {
+        throw std::runtime_error("Failed to load texture " + file_path + ": " + IMG_GetError());
+      }
+      
+      bitmapProvider->texture_width = surface->w;
+      bitmapProvider->texture_height = surface->h;
+      std::cout << "Loading texture: " << file_path << " (" << bitmapProvider->texture_width << "x" << bitmapProvider->texture_height << ")" << std::endl;
+      std::cout << "Surface format: " << SDL_GetPixelFormatName(surface->format->format) << std::endl;
+
+      // Convert to RGBA for OpenGL
+      SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+      if (!converted) {
+        throw std::runtime_error("Failed to convert surface format");
+      }
+      SDL_FreeSurface(surface);
+      surface = converted;
+
+      glBindTexture(GL_TEXTURE_2D, bitmapProvider->texture);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmapProvider->texture_width, bitmapProvider->texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      SDL_FreeSurface(surface);
+
+      // Process chars and build glyph cache
       if (provider.contains("chars")) {
         auto decode_utf8_to_codepoints = [](const std::string& s) -> std::vector<uint16_t> {
           std::vector<uint16_t> codes;
@@ -64,35 +90,35 @@ Font::Font(const ResourceLocation &loc) {
           }
           return codes;
         };
+
+        // Calculate character dimensions
+        std::vector<std::vector<uint16_t>> char_rows;
         for (auto& row : provider["chars"]) {
           std::string row_str = row.get<std::string>();
           auto row_codes = decode_utf8_to_codepoints(row_str);
-          bitmapProvider->chars.push_back(row_codes);
+          char_rows.push_back(row_codes);
+        }
+
+        if (!char_rows.empty()) {
+          int chars_per_row = char_rows[0].size();
+          int char_width = bitmapProvider->texture_width / chars_per_row;
+          
+          // Build glyph cache
+          for (int row = 0; row < char_rows.size(); ++row) {
+            const auto& row_chars = char_rows[row];
+            for (int col = 0; col < row_chars.size(); ++col) {
+              uint16_t code = row_chars[col];
+              if (code != 0) {  // Skip null characters
+                BitmapFontProvider::Glyph glyph;
+                glyph.u = (col * char_width) / static_cast<float>(bitmapProvider->texture_width);
+                glyph.v = (row * bitmapProvider->height) / static_cast<float>(bitmapProvider->texture_height);
+                glyph.width = static_cast<float>(char_width);
+                bitmapProvider->glyphs[code] = glyph;
+              }
+            }
+          }
         }
       }
-      std::string file_path = ResourceLocation(provider["file"].get<std::string>()).to_path("textures");
-      SDL_Surface* surface = IMG_Load(file_path.c_str());
-      if (!surface) {
-        throw std::runtime_error("Failed to load texture " + file_path + ": " + IMG_GetError());
-      }
-      bitmapProvider->texture_width = surface->w;
-      bitmapProvider->texture_height = surface->h;
-      std::cout << "Loading texture: " << file_path << " (" << surface->w << "x" << surface->h << ")" << std::endl;
-      std::cout << "Surface format: " << SDL_GetPixelFormatName(surface->format->format) << std::endl;
-
-      // Convert to RGBA if needed
-      SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
-      if (!converted) {
-        throw std::runtime_error("Failed to convert surface format");
-      }
-      SDL_FreeSurface(surface);
-      surface = converted;
-
-      glBindTexture(GL_TEXTURE_2D, bitmapProvider->texture);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      SDL_FreeSurface(surface);
       providers.push_back(std::move(bitmapProvider));
     } else if (type == "space") {
       auto spaceProvider = std::make_unique<SpaceFontProvider>();

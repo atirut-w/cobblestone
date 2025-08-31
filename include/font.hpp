@@ -11,12 +11,18 @@ struct FontProvider {
 };
 
 struct BitmapFontProvider : public FontProvider {
-   int ascent;
-   std::vector<std::vector<uint16_t>> chars;
-   Texture texture;
-   int height;
-   int texture_width;
-   int texture_height;
+  struct Glyph {
+    float u;
+    float v;
+    float width;
+  };
+
+  int ascent;
+  int height;
+  std::unordered_map<uint16_t, Glyph> glyphs;
+  Texture texture;
+  int texture_width;
+  int texture_height;
 };
 
 struct SpaceFontProvider : public FontProvider {
