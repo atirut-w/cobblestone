@@ -9,19 +9,6 @@
 
 using json = nlohmann::json;
 
-ReferenceFontProvider::ReferenceFontProvider(const ResourceLocation &loc)
-    : ref(std::make_unique<Font>(loc)) {}
-
-bool ReferenceFontProvider::handles_character(uint16_t code) const {
-  // Check if any of the referenced font's providers handle this character
-  for (const auto& provider : ref->providers) {
-    if (provider->handles_character(code)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 Font::Font(const ResourceLocation &loc) {
   std::ifstream file(loc.to_path("font") + ".json");
   if (!file) {
@@ -29,12 +16,18 @@ Font::Font(const ResourceLocation &loc) {
   }
   json data = json::parse(file, nullptr, true, false, true);
 
+  std::vector<std::string> referenced_fonts;
   for (const auto &provider : data["providers"]) {
     auto type = provider["type"].get<std::string>();
     if (type == "reference") {
-      auto refProvider = std::make_unique<ReferenceFontProvider>(
-          ResourceLocation(provider["id"].get<std::string>()));
-      providers.push_back(std::move(refProvider));
+      if (std::find(referenced_fonts.begin(), referenced_fonts.end(),
+                    provider["id"].get<std::string>()) == referenced_fonts.end()) {
+        referenced_fonts.push_back(provider["id"].get<std::string>());
+        Font refFont(ResourceLocation(provider["id"].get<std::string>()));
+        for (auto &p : refFont.providers) {
+          providers.push_back(std::move(p));
+        }
+      }
     } else if (type == "bitmap") {
       auto bitmapProvider = std::make_unique<BitmapFontProvider>();
       bitmapProvider->ascent = provider["ascent"].get<int>();

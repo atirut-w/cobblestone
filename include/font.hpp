@@ -38,15 +38,6 @@ struct SpaceFontProvider : public FontProvider {
   }
 };
 
-struct Font;
-struct ReferenceFontProvider : public FontProvider {
-  std::unique_ptr<Font> ref;
-
-  ReferenceFontProvider(const ResourceLocation &loc);
-  
-  bool handles_character(uint16_t code) const override;
-};
-
 struct Font {
   std::vector<std::unique_ptr<FontProvider>> providers;
 

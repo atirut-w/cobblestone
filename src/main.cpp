@@ -54,34 +54,25 @@ void render_text(const Font& font, const std::string& text, float x, float y, fl
         uint16_t code = (codepoint <= 0xFFFF) ? static_cast<uint16_t>(codepoint) : 0;
         if (code == 0) continue;
 
-        // Find the first concrete provider that handles this character (priority order)
-        FontProvider* concrete_handler = nullptr;
+        // Find the first provider that handles this character (priority order)
+        // Since references are now flattened, we can directly iterate through providers
+        FontProvider* handler = nullptr;
         
-        std::function<void(const std::vector<std::unique_ptr<FontProvider>>&)> find_concrete_handler =
-            [&](const std::vector<std::unique_ptr<FontProvider>>& providers) {
-                for (const auto& provider : providers) {
-                    if (auto ref = dynamic_cast<const ReferenceFontProvider*>(provider.get())) {
-                        // Recursively search through referenced providers
-                        find_concrete_handler(ref->ref->providers);
-                        if (concrete_handler) return; // Found a handler in the referenced font
-                    } else if (provider->handles_character(code)) {
-                        // Found a concrete provider that handles this character
-                        concrete_handler = provider.get();
-                        return;
-                    }
-                }
-            };
+        for (const auto& provider : font.providers) {
+            if (provider->handles_character(code)) {
+                handler = provider.get();
+                break;
+            }
+        }
 
-        find_concrete_handler(font.providers);
-
-        if (concrete_handler) {
-            if (auto space = dynamic_cast<const SpaceFontProvider*>(concrete_handler)) {
+        if (handler) {
+            if (auto space = dynamic_cast<const SpaceFontProvider*>(handler)) {
                 // Space provider - use advance value
                 auto it = space->advances.find(code);
                 if (it != space->advances.end()) {
                     current_x += it->second * scale;
                 }
-            } else if (auto bitmap = dynamic_cast<const BitmapFontProvider*>(concrete_handler)) {
+            } else if (auto bitmap = dynamic_cast<const BitmapFontProvider*>(handler)) {
                 // Bitmap provider - render glyph
                 auto it = bitmap->glyphs.find(code);
                 if (it != bitmap->glyphs.end()) {
