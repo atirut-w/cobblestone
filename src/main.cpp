@@ -1,12 +1,12 @@
 #include "font.hpp"
 #include <GLES/gl.h>
 #include <SDL.h>
+#include <functional>
+#include <iostream>
 #include <stdexcept>
 #include <string>
-#include <vector>
-#include <iostream>
-#include <functional>
 #include <utf8.h>
+#include <vector>
 
 #ifdef __PSP__
 #include <exception>
@@ -34,77 +34,88 @@
 }
 #endif
 
+void render_text(const Font &font, const std::string &text, float x, float y,
+                 float scale = 1.0f) {
+  glEnable(GL_TEXTURE_2D);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-void render_text(const Font& font, const std::string& text, float x, float y, float scale = 1.0f) {
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  float current_x = x;
+  auto text_it = text.begin();
 
-    float current_x = x;
-    auto text_it = text.begin();
-
-    while (text_it != text.end()) {
-        uint32_t codepoint = 0;
-        try {
-            codepoint = utf8::next(text_it, text.end());
-        } catch (const utf8::exception&) {
-            break; // Invalid UTF-8
-        }
-
-        uint16_t code = (codepoint <= 0xFFFF) ? static_cast<uint16_t>(codepoint) : 0;
-        if (code == 0) continue;
-
-        // Find the first provider that handles this character (priority order)
-        // Since references are now flattened, we can directly iterate through providers
-        FontProvider* handler = nullptr;
-        
-        for (const auto& provider : font.providers) {
-            if (provider->handles_character(code)) {
-                handler = provider.get();
-                break;
-            }
-        }
-
-        if (handler) {
-            if (auto space = dynamic_cast<const SpaceFontProvider*>(handler)) {
-                // Space provider - use advance value
-                auto it = space->advances.find(code);
-                if (it != space->advances.end()) {
-                    current_x += it->second * scale;
-                }
-            } else if (auto bitmap = dynamic_cast<const BitmapFontProvider*>(handler)) {
-                // Bitmap provider - render glyph
-                auto it = bitmap->glyphs.find(code);
-                if (it != bitmap->glyphs.end()) {
-                    const auto& glyph = it->second;
-                    
-                    // Use cached glyph coordinates
-                    float u1 = glyph.u;
-                    float v1 = glyph.v;
-                    float u2 = u1 + (glyph.width / static_cast<float>(bitmap->texture_width));
-                    float v2 = v1 + (bitmap->height / static_cast<float>(bitmap->texture_height));
-
-                    // Bind texture
-                    glBindTexture(GL_TEXTURE_2D, bitmap->texture);
-
-                    // Draw quad
-                    glBegin(GL_QUADS);
-                    glTexCoord2f(u1, v1); glVertex2f(current_x, y);
-                    glTexCoord2f(u2, v1); glVertex2f(current_x + glyph.width * scale, y);
-                    glTexCoord2f(u2, v2); glVertex2f(current_x + glyph.width * scale, y + bitmap->height * scale);
-                    glTexCoord2f(u1, v2); glVertex2f(current_x, y + bitmap->height * scale);
-                    glEnd();
-
-                    // Advance position
-                    current_x += glyph.width * scale;
-                }
-            }
-        }
-        // If no provider handles the character, it's simply skipped
+  while (text_it != text.end()) {
+    uint32_t codepoint = 0;
+    try {
+      codepoint = utf8::next(text_it, text.end());
+    } catch (const utf8::exception &) {
+      break; // Invalid UTF-8
     }
 
-    glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
+    uint16_t code =
+        (codepoint <= 0xFFFF) ? static_cast<uint16_t>(codepoint) : 0;
+    if (code == 0)
+      continue;
+
+    // Find the first provider that handles this character (priority order)
+    // Since references are now flattened, we can directly iterate through
+    // providers
+    FontProvider *handler = nullptr;
+
+    for (const auto &provider : font.providers) {
+      if (provider->handles_character(code)) {
+        handler = provider.get();
+        break;
+      }
+    }
+
+    if (handler) {
+      if (auto space = dynamic_cast<const SpaceFontProvider *>(handler)) {
+        // Space provider - use advance value
+        auto it = space->advances.find(code);
+        if (it != space->advances.end()) {
+          current_x += it->second * scale;
+        }
+      } else if (auto bitmap =
+                     dynamic_cast<const BitmapFontProvider *>(handler)) {
+        // Bitmap provider - render glyph
+        auto it = bitmap->glyphs.find(code);
+        if (it != bitmap->glyphs.end()) {
+          const auto &glyph = it->second;
+
+          // Use cached glyph coordinates
+          float u1 = glyph.u;
+          float v1 = glyph.v;
+          float u2 =
+              u1 + (glyph.width / static_cast<float>(bitmap->texture_width));
+          float v2 = v1 + (bitmap->height /
+                           static_cast<float>(bitmap->texture_height));
+
+          // Bind texture
+          glBindTexture(GL_TEXTURE_2D, bitmap->texture);
+
+          // Draw quad
+          glBegin(GL_QUADS);
+          glTexCoord2f(u1, v1);
+          glVertex2f(current_x, y);
+          glTexCoord2f(u2, v1);
+          glVertex2f(current_x + glyph.width * scale, y);
+          glTexCoord2f(u2, v2);
+          glVertex2f(current_x + glyph.width * scale,
+                     y + bitmap->height * scale);
+          glTexCoord2f(u1, v2);
+          glVertex2f(current_x, y + bitmap->height * scale);
+          glEnd();
+
+          // Advance position
+          current_x += glyph.width * scale;
+        }
+      }
+    }
+    // If no provider handles the character, it's simply skipped
+  }
+
+  glDisable(GL_BLEND);
+  glDisable(GL_TEXTURE_2D);
 }
 
 int main(int argc, char *argv[]) {
@@ -133,7 +144,8 @@ int main(int argc, char *argv[]) {
   }
 
   Font font(ResourceLocation("minecraft:default"));
-  std::cout << "Font loaded with " << font.providers.size() << " providers" << std::endl;
+  std::cout << "Font loaded with " << font.providers.size() << " providers"
+            << std::endl;
 
   bool running = true;
   SDL_Event event;
@@ -167,4 +179,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-

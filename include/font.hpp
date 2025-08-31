@@ -1,10 +1,10 @@
 #pragma once
+#include "glxx/texture.hpp"
 #include "resource_location.hpp"
+#include <cstdint>
 #include <memory>
 #include <unordered_map>
-#include <cstdint>
 #include <vector>
-#include "glxx/texture.hpp"
 
 struct FontProvider {
   virtual ~FontProvider() = default;
