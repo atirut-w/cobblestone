@@ -12,6 +12,16 @@ using json = nlohmann::json;
 ReferenceFontProvider::ReferenceFontProvider(const ResourceLocation &loc)
     : ref(std::make_unique<Font>(loc)) {}
 
+bool ReferenceFontProvider::handles_character(uint16_t code) const {
+  // Check if any of the referenced font's providers handle this character
+  for (const auto& provider : ref->providers) {
+    if (provider->handles_character(code)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 Font::Font(const ResourceLocation &loc) {
   std::ifstream file(loc.to_path("font") + ".json");
   if (!file) {

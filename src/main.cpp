@@ -54,79 +54,62 @@ void render_text(const Font& font, const std::string& text, float x, float y, fl
         uint16_t code = (codepoint <= 0xFFFF) ? static_cast<uint16_t>(codepoint) : 0;
         if (code == 0) continue;
 
-        // Find the provider that has this character
-        const BitmapFontProvider* bitmap_provider = nullptr;
-        const BitmapFontProvider::Glyph* glyph = nullptr;
-
-        // Function to search providers recursively
-        std::function<void(const std::vector<std::unique_ptr<FontProvider>>&)> search_providers =
+        // Find the first concrete provider that handles this character (priority order)
+        FontProvider* concrete_handler = nullptr;
+        
+        std::function<void(const std::vector<std::unique_ptr<FontProvider>>&)> find_concrete_handler =
             [&](const std::vector<std::unique_ptr<FontProvider>>& providers) {
                 for (const auto& provider : providers) {
-                    if (auto bmp = dynamic_cast<const BitmapFontProvider*>(provider.get())) {
-                        // Search through glyph cache
-                        auto it = bmp->glyphs.find(code);
-                        if (it != bmp->glyphs.end()) {
-                            bitmap_provider = bmp;
-                            glyph = &it->second;
-                            return;
-                        }
-                    } else if (auto ref = dynamic_cast<const ReferenceFontProvider*>(provider.get())) {
-                        search_providers(ref->ref->providers);
+                    if (auto ref = dynamic_cast<const ReferenceFontProvider*>(provider.get())) {
+                        // Recursively search through referenced providers
+                        find_concrete_handler(ref->ref->providers);
+                        if (concrete_handler) return; // Found a handler in the referenced font
+                    } else if (provider->handles_character(code)) {
+                        // Found a concrete provider that handles this character
+                        concrete_handler = provider.get();
+                        return;
                     }
-                    if (bitmap_provider) return;
                 }
             };
 
-        search_providers(font.providers);
+        find_concrete_handler(font.providers);
 
-        if (bitmap_provider && glyph) {
-            // Use cached glyph coordinates
-            float u1 = glyph->u;
-            float v1 = glyph->v;
-            float u2 = u1 + (glyph->width / static_cast<float>(bitmap_provider->texture_width));
-            float v2 = v1 + (bitmap_provider->height / static_cast<float>(bitmap_provider->texture_height));
+        if (concrete_handler) {
+            if (auto space = dynamic_cast<const SpaceFontProvider*>(concrete_handler)) {
+                // Space provider - use advance value
+                auto it = space->advances.find(code);
+                if (it != space->advances.end()) {
+                    current_x += it->second * scale;
+                }
+            } else if (auto bitmap = dynamic_cast<const BitmapFontProvider*>(concrete_handler)) {
+                // Bitmap provider - render glyph
+                auto it = bitmap->glyphs.find(code);
+                if (it != bitmap->glyphs.end()) {
+                    const auto& glyph = it->second;
+                    
+                    // Use cached glyph coordinates
+                    float u1 = glyph.u;
+                    float v1 = glyph.v;
+                    float u2 = u1 + (glyph.width / static_cast<float>(bitmap->texture_width));
+                    float v2 = v1 + (bitmap->height / static_cast<float>(bitmap->texture_height));
 
-            // Bind texture
-            glBindTexture(GL_TEXTURE_2D, bitmap_provider->texture);
+                    // Bind texture
+                    glBindTexture(GL_TEXTURE_2D, bitmap->texture);
 
-            // Draw quad
-            glBegin(GL_QUADS);
-            glTexCoord2f(u1, v1); glVertex2f(current_x, y);
-            glTexCoord2f(u2, v1); glVertex2f(current_x + glyph->width * scale, y);
-            glTexCoord2f(u2, v2); glVertex2f(current_x + glyph->width * scale, y + bitmap_provider->height * scale);
-            glTexCoord2f(u1, v2); glVertex2f(current_x, y + bitmap_provider->height * scale);
-            glEnd();
+                    // Draw quad
+                    glBegin(GL_QUADS);
+                    glTexCoord2f(u1, v1); glVertex2f(current_x, y);
+                    glTexCoord2f(u2, v1); glVertex2f(current_x + glyph.width * scale, y);
+                    glTexCoord2f(u2, v2); glVertex2f(current_x + glyph.width * scale, y + bitmap->height * scale);
+                    glTexCoord2f(u1, v2); glVertex2f(current_x, y + bitmap->height * scale);
+                    glEnd();
 
-            // Advance position
-            current_x += glyph->width * scale;
-        } else {
-            // Check space provider for advance (recursively search through all providers)
-            int advance = 0;
-            bool found_advance = false;
-            
-            std::function<void(const std::vector<std::unique_ptr<FontProvider>>&)> search_space_providers =
-                [&](const std::vector<std::unique_ptr<FontProvider>>& providers) {
-                    for (const auto& provider : providers) {
-                        if (auto space = dynamic_cast<const SpaceFontProvider*>(provider.get())) {
-                            auto it = space->advances.find(code);
-                            if (it != space->advances.end()) {
-                                advance = it->second;
-                                found_advance = true;
-                                return;
-                            }
-                        } else if (auto ref = dynamic_cast<const ReferenceFontProvider*>(provider.get())) {
-                            search_space_providers(ref->ref->providers);
-                        }
-                        if (found_advance) return;
-                    }
-                };
-            
-            search_space_providers(font.providers);
-
-            if (found_advance) {
-                current_x += advance * scale;
+                    // Advance position
+                    current_x += glyph.width * scale;
+                }
             }
         }
+        // If no provider handles the character, it's simply skipped
     }
 
     glDisable(GL_BLEND);

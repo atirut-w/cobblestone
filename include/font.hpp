@@ -8,6 +8,7 @@
 
 struct FontProvider {
   virtual ~FontProvider() = default;
+  virtual bool handles_character(uint16_t code) const = 0;
 };
 
 struct BitmapFontProvider : public FontProvider {
@@ -23,10 +24,18 @@ struct BitmapFontProvider : public FontProvider {
   Texture texture;
   int texture_width;
   int texture_height;
+
+  bool handles_character(uint16_t code) const override {
+    return glyphs.find(code) != glyphs.end();
+  }
 };
 
 struct SpaceFontProvider : public FontProvider {
   std::unordered_map<uint16_t, int> advances;
+
+  bool handles_character(uint16_t code) const override {
+    return advances.find(code) != advances.end();
+  }
 };
 
 struct Font;
@@ -34,6 +43,8 @@ struct ReferenceFontProvider : public FontProvider {
   std::unique_ptr<Font> ref;
 
   ReferenceFontProvider(const ResourceLocation &loc);
+  
+  bool handles_character(uint16_t code) const override;
 };
 
 struct Font {
