@@ -1,3 +1,6 @@
 [submodule "3rd/json"]
 	path = 3rd/json
 	url = https://github.com/nlohmann/json
+[submodule "3rd/utfcpp"]
+	path = 3rd/utfcpp
+	url = https://github.com/nemtrif/utfcpp

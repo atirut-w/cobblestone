@@ -6,6 +6,7 @@
 #include <vector>
 #include <iostream>
 #include <functional>
+#include <utf8.h>
 
 #ifdef __PSP__
 #include <exception>
@@ -33,32 +34,6 @@
 }
 #endif
 
-// Helper function to decode UTF-8 to codepoint
-uint32_t decode_utf8(const std::string& s, size_t& i) {
-    if (i >= s.size()) return 0;
-    uint32_t code = 0;
-    unsigned char c = static_cast<unsigned char>(s[i]);
-    if (c < 0x80) {
-        code = c;
-        i += 1;
-    } else if (c < 0xE0) {
-        if (i + 1 >= s.size()) return 0;
-        code = ((c & 0x1F) << 6) | (static_cast<unsigned char>(s[i+1]) & 0x3F);
-        i += 2;
-    } else if (c < 0xF0) {
-        if (i + 2 >= s.size()) return 0;
-        code = ((c & 0x0F) << 12) | ((static_cast<unsigned char>(s[i+1]) & 0x3F) << 6) | (static_cast<unsigned char>(s[i+2]) & 0x3F);
-        i += 3;
-    } else if (c < 0xF8) {
-        if (i + 3 >= s.size()) return 0;
-        code = ((c & 0x07) << 18) | ((static_cast<unsigned char>(s[i+1]) & 0x3F) << 12) | ((static_cast<unsigned char>(s[i+2]) & 0x3F) << 6) | (static_cast<unsigned char>(s[i+3]) & 0x3F);
-        i += 4;
-    } else {
-        i += 1; // invalid
-        return 0;
-    }
-    return code;
-}
 
 void render_text(const Font& font, const std::string& text, float x, float y, float scale = 1.0f) {
     glEnable(GL_TEXTURE_2D);
@@ -66,11 +41,15 @@ void render_text(const Font& font, const std::string& text, float x, float y, fl
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     float current_x = x;
-    size_t text_i = 0;
+    auto text_it = text.begin();
 
-    while (text_i < text.size()) {
-        uint32_t codepoint = decode_utf8(text, text_i);
-        if (codepoint == 0) break;
+    while (text_it != text.end()) {
+        uint32_t codepoint = 0;
+        try {
+            codepoint = utf8::next(text_it, text.end());
+        } catch (const utf8::exception&) {
+            break; // Invalid UTF-8
+        }
 
         uint16_t code = (codepoint <= 0xFFFF) ? static_cast<uint16_t>(codepoint) : 0;
         if (code == 0) continue;
@@ -145,7 +124,7 @@ void render_text(const Font& font, const std::string& text, float x, float y, fl
             search_space_providers(font.providers);
 
             if (found_advance) {
-                current_x += 16 * scale;
+                current_x += advance * scale;
             }
         }
     }

@@ -21,6 +21,7 @@ target_link_libraries(cobblestone PRIVATE
     ${SDL2_LIBRARIES}
     ${SDL2_IMAGE_LIBRARIES}
     nlohmann_json::nlohmann_json
+    utf8cpp
 
     pspdebug
     pspdisplay

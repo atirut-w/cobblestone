@@ -5,6 +5,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <GLES/gl.h>
+#include <utf8.h>
 
 using json = nlohmann::json;
 
@@ -61,31 +62,16 @@ Font::Font(const ResourceLocation &loc) {
       if (provider.contains("chars")) {
         auto decode_utf8_to_codepoints = [](const std::string& s) -> std::vector<uint16_t> {
           std::vector<uint16_t> codes;
-          size_t i = 0;
-          while (i < s.size()) {
-            uint32_t code = 0;
-            unsigned char c = static_cast<unsigned char>(s[i]);
-            if (c < 0x80) {
-              code = c;
-              i += 1;
-            } else if (c < 0xE0) {
-              if (i + 1 >= s.size()) break;
-              code = ((c & 0x1F) << 6) | (static_cast<unsigned char>(s[i+1]) & 0x3F);
-              i += 2;
-            } else if (c < 0xF0) {
-              if (i + 2 >= s.size()) break;
-              code = ((c & 0x0F) << 12) | ((static_cast<unsigned char>(s[i+1]) & 0x3F) << 6) | (static_cast<unsigned char>(s[i+2]) & 0x3F);
-              i += 3;
-            } else if (c < 0xF8) {
-              if (i + 3 >= s.size()) break;
-              code = ((c & 0x07) << 18) | ((static_cast<unsigned char>(s[i+1]) & 0x3F) << 12) | ((static_cast<unsigned char>(s[i+2]) & 0x3F) << 6) | (static_cast<unsigned char>(s[i+3]) & 0x3F);
-              i += 4;
-            } else {
-              i += 1; // invalid
-              continue;
-            }
-            if (code <= 0xFFFF) {
-              codes.push_back(static_cast<uint16_t>(code));
+          auto it = s.begin();
+          while (it != s.end()) {
+            try {
+              uint32_t code = utf8::next(it, s.end());
+              if (code <= 0xFFFF) {
+                codes.push_back(static_cast<uint16_t>(code));
+              }
+            } catch (const utf8::exception&) {
+              // Skip invalid UTF-8
+              if (it != s.end()) ++it;
             }
           }
           return codes;
@@ -153,22 +139,12 @@ Font::Font(const ResourceLocation &loc) {
       if (provider.contains("advances")) {
         auto decode_utf8 = [](const std::string& s) -> uint32_t {
           if (s.empty()) return 0;
-          unsigned char c = static_cast<unsigned char>(s[0]);
-          if (c < 0x80) return c;
-          if (c < 0xC0) return 0; // invalid
-          if (c < 0xE0) {
-            if (s.size() < 2) return 0;
-            return ((c & 0x1F) << 6) | (static_cast<unsigned char>(s[1]) & 0x3F);
+          try {
+            auto it = s.begin();
+            return utf8::next(it, s.end());
+          } catch (const utf8::exception&) {
+            return 0; // invalid UTF-8
           }
-          if (c < 0xF0) {
-            if (s.size() < 3) return 0;
-            return ((c & 0x0F) << 12) | ((static_cast<unsigned char>(s[1]) & 0x3F) << 6) | (static_cast<unsigned char>(s[2]) & 0x3F);
-          }
-          if (c < 0xF8) {
-            if (s.size() < 4) return 0;
-            return ((c & 0x07) << 18) | ((static_cast<unsigned char>(s[1]) & 0x3F) << 12) | ((static_cast<unsigned char>(s[2]) & 0x3F) << 6) | (static_cast<unsigned char>(s[3]) & 0x3F);
-          }
-          return 0; // invalid
         };
         for (auto& [key, val] : provider["advances"].items()) {
           int advance = val.get<int>();
