@@ -121,15 +121,31 @@ void render_text(const Font& font, const std::string& text, float x, float y, fl
             // Advance position
             current_x += glyph->width * scale;
         } else {
-            // Check space provider for advance
-            for (const auto& provider : font.providers) {
-                if (auto space = dynamic_cast<const SpaceFontProvider*>(provider.get())) {
-                    auto it = space->advances.find(code);
-                    if (it != space->advances.end()) {
-                        current_x += it->second * scale;
-                        break;
+            // Check space provider for advance (recursively search through all providers)
+            int advance = 0;
+            bool found_advance = false;
+            
+            std::function<void(const std::vector<std::unique_ptr<FontProvider>>&)> search_space_providers =
+                [&](const std::vector<std::unique_ptr<FontProvider>>& providers) {
+                    for (const auto& provider : providers) {
+                        if (auto space = dynamic_cast<const SpaceFontProvider*>(provider.get())) {
+                            auto it = space->advances.find(code);
+                            if (it != space->advances.end()) {
+                                advance = it->second;
+                                found_advance = true;
+                                return;
+                            }
+                        } else if (auto ref = dynamic_cast<const ReferenceFontProvider*>(provider.get())) {
+                            search_space_providers(ref->ref->providers);
+                        }
+                        if (found_advance) return;
                     }
-                }
+                };
+            
+            search_space_providers(font.providers);
+
+            if (found_advance) {
+                current_x += 16 * scale;
             }
         }
     }
