@@ -103,7 +103,7 @@ Font::Font(const ResourceLocation &loc) {
           int chars_per_row = char_rows[0].size();
           int char_width = bitmapProvider->texture_width / chars_per_row;
           
-          // Build glyph cache
+          // Build glyph cache with width calculation based on rightmost alpha pixels
           for (int row = 0; row < char_rows.size(); ++row) {
             const auto& row_chars = char_rows[row];
             for (int col = 0; col < row_chars.size(); ++col) {
@@ -112,7 +112,35 @@ Font::Font(const ResourceLocation &loc) {
                 BitmapFontProvider::Glyph glyph;
                 glyph.u = (col * char_width) / static_cast<float>(bitmapProvider->texture_width);
                 glyph.v = (row * bitmapProvider->height) / static_cast<float>(bitmapProvider->texture_height);
-                glyph.width = static_cast<float>(char_width);
+                
+                // Calculate actual width based on rightmost column with alpha > 0
+                int actual_width = 0;
+                int start_x = col * char_width;
+                int start_y = row * bitmapProvider->height;
+                
+                // Scan from right to left to find rightmost column with alpha
+                for (int x = start_x + char_width - 1; x >= start_x; x--) {
+                  bool has_alpha = false;
+                  for (int y = start_y; y < start_y + bitmapProvider->height && y < bitmapProvider->texture_height; y++) {
+                    if (x < bitmapProvider->texture_width) {
+                      // Access pixel data - surface is RGBA32
+                      int pixel_index = (y * bitmapProvider->texture_width + x) * 4;
+                      uint8_t* pixels = static_cast<uint8_t*>(surface->pixels);
+                      uint8_t alpha = pixels[pixel_index + 3]; // Alpha channel
+                      if (alpha > 0) {
+                        has_alpha = true;
+                        break;
+                      }
+                    }
+                  }
+                  if (has_alpha) {
+                    actual_width = (x - start_x) + 1;
+                    break;
+                  }
+                }
+                
+                // Use at least 1 pixel width if no alpha found, then add 1 pixel padding
+                glyph.width = static_cast<float>((actual_width > 0 ? actual_width : 1) + 1);
                 bitmapProvider->glyphs[code] = glyph;
               }
             }
