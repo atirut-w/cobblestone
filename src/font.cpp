@@ -1,5 +1,5 @@
 #include "font.hpp"
-#include <GLES/gl.h>
+#include <GL/gl.h>
 #include <SDL.h>
 #include <SDL_image.h>
 #include <fstream>

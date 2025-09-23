@@ -1,5 +1,5 @@
 #include "font.hpp"
-#include <GLES/gl.h>
+#include <GL/gl.h>
 #include <SDL.h>
 #include <functional>
 #include <iostream>
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
     throw std::runtime_error("Failed to initialize SDL");
   }
 
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 
@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
     // Set up 2D projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrthof(0, 480, 272, 0, -1, 1);
+    glOrtho(0, 480, 272, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
