@@ -1,5 +1,5 @@
 #include "font.hpp"
-#include <GLES/gl.h>
+#include <GL/gl.h>
 #include <SDL.h>
 #include <SDL_image.h>
 #include <fstream>
@@ -62,14 +62,6 @@ Font::Font(const ResourceLocation &loc) {
       }
       SDL_FreeSurface(surface);
       surface = converted;
-
-      glBindTexture(GL_TEXTURE_2D, bitmapProvider->texture);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmapProvider->texture_width,
-                   bitmapProvider->texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                   surface->pixels);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      SDL_FreeSurface(surface);
 
       // Process chars and build glyph cache
       if (provider.contains("chars")) {
@@ -157,6 +149,15 @@ Font::Font(const ResourceLocation &loc) {
           }
         }
       }
+
+      // Now create OpenGL texture and free surface
+      glBindTexture(GL_TEXTURE_2D, bitmapProvider->texture);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmapProvider->texture_width,
+                   bitmapProvider->texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                   surface->pixels);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      SDL_FreeSurface(surface);
       providers.push_back(std::move(bitmapProvider));
     } else if (type == "space") {
       auto spaceProvider = std::make_unique<SpaceFontProvider>();

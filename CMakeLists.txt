@@ -22,17 +22,22 @@ target_link_libraries(cobblestone PRIVATE
     ${SDL2_IMAGE_LIBRARIES}
     nlohmann_json::nlohmann_json
     utf8cpp
-
-    pspdebug
-    pspdisplay
-    pspge
+    GL
 )
 
-create_pbp_file(
-    TARGET cobblestone
-    ICON_PATH NULL
-    BACKGROUND_PATH NULL
-    PREVIEW_PATH NULL
-    TITLE "Cobblestone Engine"
-    VERSION 01.00
-)
+if (PSP)
+    target_link_libraries(cobblestone PRIVATE
+        pspdebug
+        pspdisplay
+        pspge
+    )
+
+    create_pbp_file(
+        TARGET cobblestone
+        ICON_PATH NULL
+        BACKGROUND_PATH NULL
+        PREVIEW_PATH NULL
+        TITLE "Cobblestone Engine"
+        VERSION 01.00
+    )
+endif()

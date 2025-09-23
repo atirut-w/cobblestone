@@ -1,5 +1,5 @@
 #pragma once
-#include <GLES/gl.h>
+#include <GL/gl.h>
 
 struct Texture {
   GLuint id;
