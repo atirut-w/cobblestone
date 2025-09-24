@@ -1,12 +1,7 @@
-#include "font.hpp"
 #include <GL/gl.h>
 #include <SDL.h>
-#include <functional>
 #include <iostream>
 #include <stdexcept>
-#include <string>
-#include <utf8.h>
-#include <vector>
 
 #ifdef __PSP__
 #include <exception>
@@ -34,90 +29,6 @@
 }
 #endif
 
-void render_text(const Font &font, const std::string &text, float x, float y,
-                 float scale = 1.0f) {
-  glEnable(GL_TEXTURE_2D);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-  float current_x = x;
-  auto text_it = text.begin();
-
-  while (text_it != text.end()) {
-    uint32_t codepoint = 0;
-    try {
-      codepoint = utf8::next(text_it, text.end());
-    } catch (const utf8::exception &) {
-      break; // Invalid UTF-8
-    }
-
-    uint16_t code =
-        (codepoint <= 0xFFFF) ? static_cast<uint16_t>(codepoint) : 0;
-    if (code == 0)
-      continue;
-
-    // Find the first provider that handles this character (priority order)
-    // Since references are now flattened, we can directly iterate through
-    // providers
-    FontProvider *handler = nullptr;
-
-    for (const auto &provider : font.providers) {
-      if (provider->handles_character(code)) {
-        handler = provider.get();
-        break;
-      }
-    }
-
-    if (handler) {
-      if (auto space = dynamic_cast<const SpaceFontProvider *>(handler)) {
-        // Space provider - use advance value
-        auto it = space->advances.find(code);
-        if (it != space->advances.end()) {
-          current_x += it->second * scale;
-        }
-      } else if (auto bitmap =
-                     dynamic_cast<const BitmapFontProvider *>(handler)) {
-        // Bitmap provider - render glyph
-        auto it = bitmap->glyphs.find(code);
-        if (it != bitmap->glyphs.end()) {
-          const auto &glyph = it->second;
-
-          // Use cached glyph coordinates
-          float u1 = glyph.u;
-          float v1 = glyph.v;
-          float u2 =
-              u1 + (glyph.width / static_cast<float>(bitmap->texture_width));
-          float v2 = v1 + (bitmap->height /
-                           static_cast<float>(bitmap->texture_height));
-
-          // Bind texture
-          glBindTexture(GL_TEXTURE_2D, bitmap->texture);
-
-          // Draw quad
-          glBegin(GL_QUADS);
-          glTexCoord2f(u1, v1);
-          glVertex2f(current_x, y);
-          glTexCoord2f(u2, v1);
-          glVertex2f(current_x + glyph.width * scale, y);
-          glTexCoord2f(u2, v2);
-          glVertex2f(current_x + glyph.width * scale,
-                     y + bitmap->height * scale);
-          glTexCoord2f(u1, v2);
-          glVertex2f(current_x, y + bitmap->height * scale);
-          glEnd();
-
-          // Advance position
-          current_x += glyph.width * scale;
-        }
-      }
-    }
-    // If no provider handles the character, it's simply skipped
-  }
-
-  glDisable(GL_BLEND);
-  glDisable(GL_TEXTURE_2D);
-}
-
 int main(int argc, char *argv[]) {
 #ifdef __PSP__
   std::set_terminate(terminate);
@@ -143,32 +54,17 @@ int main(int argc, char *argv[]) {
     throw std::runtime_error("Failed to create OpenGL context");
   }
 
-  Font font(ResourceLocation("minecraft:default"));
-  std::cout << "Font loaded with " << font.providers.size() << " providers"
-            << std::endl;
-
   bool running = true;
   SDL_Event event;
   while (running) {
-    if (SDL_PollEvent(&event)) {
+    while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         running = false;
       }
     }
 
-    glClearColor(0.5, 0.5, 0.0, 1.0f);
+    glClearColor(1, 0, 1, 1);
     glClear(GL_COLOR_BUFFER_BIT);
-
-    // Set up 2D projection
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0, 480, 272, 0, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    // Render some text
-    render_text(font, "Hello World!", 50, 50, 2.0f);
-    render_text(font, "Font Rendering Test", 50, 100, 1.5f);
 
     SDL_GL_SwapWindow(window);
   }

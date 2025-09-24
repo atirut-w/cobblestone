@@ -12,7 +12,6 @@ pkg_search_module(SDL2_IMAGE REQUIRED SDL2_image)
 
 add_executable(cobblestone
     src/main.cpp
-    src/font.cpp
 )
 target_include_directories(cobblestone PRIVATE
     include
