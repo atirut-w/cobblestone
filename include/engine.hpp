@@ -3,5 +3,5 @@
 
 class Engine : public Singleton<Engine> {
 public:
-  int main(int argc, char *argv[]);
+  int start(int argc, char *argv[]);
 };

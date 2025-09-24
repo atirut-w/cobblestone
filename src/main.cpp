@@ -1,4 +1,5 @@
 #include "engine.hpp"
+#include <SDL.h>
 
 #ifdef __PSP__
 #include <exception>
@@ -31,5 +32,5 @@ int main(int argc, char *argv[]) {
   std::set_terminate(terminate);
 #endif
 
-  return Engine::get().main(argc, argv);
+  return Engine::get().start(argc, argv);
 }
