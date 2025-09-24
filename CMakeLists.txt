@@ -17,6 +17,7 @@ add_executable(cobblestone
 target_include_directories(cobblestone PRIVATE
     include
     ${SDL2_INCLUDE_DIRS}
+    3rd/spdlog/include
 )
 target_link_libraries(cobblestone PRIVATE
     ${SDL2_LIBRARIES}
