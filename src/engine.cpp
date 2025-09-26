@@ -17,6 +17,7 @@ int Engine::start(int argc, char *argv[]) {
   while (running) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+      eventEmitter.emit(event);
       if (event.type == SDL_QUIT) {
         running = false;
       }

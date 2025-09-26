@@ -1,3 +1,4 @@
+#include "engine.hpp"
 #include "renderer.hpp"
 #include <SDL_opengl.h>
 #include <format>
@@ -16,7 +17,7 @@ void Renderer::init(const char *title, int width, int height) {
   logger->info("Creating window...");
   window =
       SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                       width, height, SDL_WINDOW_OPENGL);
+                       width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     throw std::runtime_error(
         std::format("Failed to create window: {}", SDL_GetError()));
@@ -34,6 +35,7 @@ void Renderer::init(const char *title, int width, int height) {
   logger->info("OpenGL Renderer: {}", (const char *)glGetString(GL_RENDERER));
   logger->info("OpenGL Version: {}", (const char *)glGetString(GL_VERSION));
 
+  Engine::get().eventEmitter += *this;
   initialized = true;
 }
 
@@ -63,4 +65,15 @@ void Renderer::swapBuffers() {
   }
 
   SDL_GL_SwapWindow(window);
+}
+
+void Renderer::onEvent(SDL_Event &event) {
+  if (event.type == SDL_WINDOWEVENT) {
+    if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+      int width = event.window.data1;
+      int height = event.window.data2;
+      glViewport(0, 0, width, height);
+      logger->info("Window resized to {}x{}", width, height);
+    }
+  }
 }
