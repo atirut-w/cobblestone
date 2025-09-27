@@ -27,6 +27,23 @@ int Engine::start(int argc, char *argv[]) {
     glClearColor(1, 0, 1, 1);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    renderer.beginUI();
+    glBegin(GL_QUADS);
+    glShadeModel(GL_SMOOTH);
+    glColor3f(1.0f, 0.0f, 0.0f); // Red (top-left)
+    glVertex2f(0.0f, 0.0f);
+
+    glColor3f(1.0f, 1.0f, 0.0f); // Yellow (top-right)
+    glVertex2f(80.0f, 0.0f);
+
+    glColor3f(0.0f, 1.0f, 0.0f); // Green (bottom-right)
+    glVertex2f(80.0f, 80.0f);
+
+    glColor3f(0.0f, 0.0f, 1.0f); // Blue (bottom-left)
+    glVertex2f(0.0f, 80.0f);
+    glEnd();
+    renderer.end();
+
     renderer.swapBuffers();
   }
 

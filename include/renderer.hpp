@@ -2,6 +2,7 @@
 #include "events.hpp"
 #include "singleton.hpp"
 #include <SDL.h>
+#include <math.hpp>
 #include <memory>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -10,11 +11,14 @@ class Renderer : public Singleton<Renderer>, public EventSink<SDL_Event &> {
   SDL_Window *window = nullptr;
   SDL_GLContext gl_context = nullptr;
   bool initialized = false;
+  Vector2<int> resolution;
 
 public:
-
   void init(const char *title, int width, int height);
   void shutdown();
   void swapBuffers();
   void onEvent(SDL_Event &event) override;
+
+  void beginUI();
+  void end();
 };
