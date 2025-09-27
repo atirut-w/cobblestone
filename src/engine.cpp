@@ -14,6 +14,13 @@ int Engine::start(int argc, char *argv[]) {
 
   auto &renderer = Renderer::get();
   renderer.init("Cobblestone Engine", 480, 272);
+  SDL_Surface *tex = IMG_Load("assets/minecraft/textures/font/ascii.png");
+  if (!tex) {
+    logger->critical("Failed to load texture: {}", SDL_GetError());
+    return 1;
+  }
+  Texture texture(*tex);
+  SDL_FreeSurface(tex);
 
   while (running) {
     SDL_Event event;
@@ -29,19 +36,25 @@ int Engine::start(int argc, char *argv[]) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     renderer.beginUI();
-    glBegin(GL_QUADS);
     glShadeModel(GL_SMOOTH);
+    glEnable(GL_TEXTURE_2D);
+    texture.bind();
+    glBegin(GL_QUADS);
     glColor3f(1.0f, 0.0f, 0.0f); // Red (top-left)
+    glTexCoord2f(0.0f, 0.0f);
     glVertex2f(0.0f, 0.0f);
 
     glColor3f(1.0f, 1.0f, 0.0f); // Yellow (top-right)
-    glVertex2f(80.0f, 0.0f);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex2f(256.0f, 0.0f);
 
     glColor3f(0.0f, 1.0f, 0.0f); // Green (bottom-right)
-    glVertex2f(80.0f, 80.0f);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex2f(256.0f, 256.0f);
 
     glColor3f(0.0f, 0.0f, 1.0f); // Blue (bottom-left)
-    glVertex2f(0.0f, 80.0f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex2f(0.0f, 256.0f);
     glEnd();
     renderer.end();
 

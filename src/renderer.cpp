@@ -13,8 +13,7 @@ void Renderer::init(const char *title, int width, int height) {
   // Do not *ever* use ES 1.1 on PC, or no triangles will render!
   // Tested on:
   // - Mesa Intel(R) Iris(R) Xe Graphics (TGL GT2)
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                      SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 
@@ -93,6 +92,10 @@ void Renderer::beginUI() {
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
   glPushMatrix();
+
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void Renderer::end() {
