@@ -1,5 +1,6 @@
 #include "engine.hpp"
 #include "renderer.hpp"
+#include "texture.hpp"
 #include <SDL.h>
 #include <SDL_opengl.h>
 

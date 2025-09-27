@@ -14,6 +14,7 @@ add_executable(cobblestone
     src/main.cpp
     src/engine.cpp
     src/renderer.cpp
+    src/texture.cpp
 )
 target_include_directories(cobblestone PRIVATE
     include
